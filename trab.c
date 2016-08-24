@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
 #define MAX_STRING_ARRAY 1
 #define IP_FIELD_SIZE 16
+#define IP_REGEX "^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.(([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))|(([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\-([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))))$"
 
 int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
@@ -71,6 +73,25 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
     return 1;
 }
 
+void validateIP(char *ip)
+{
+	/* aloca espaço para a estrutura do tipo regex_t */
+	regex_t reg;
+
+	/* compila a ER passada em argv[1]
+	 * em caso de erro, a função retorna diferente de zero */
+	if (regcomp(&reg , IP_REGEX, REG_EXTENDED|REG_NOSUB) != 0) {
+		fprintf(stderr,"erro regcomp\n");
+		exit(1);
+	}
+	/* tenta casar a ER compilada (&reg) com a entrada (argv[2]) 
+	 * se a função regexec retornar 0 casou, caso contrário não */
+	if ((regexec(&reg, ip, 0, (regmatch_t *)NULL, 0)) == 0)
+		printf("Casou\n");
+	else
+		printf("Não Casou\n");
+}
+
 int main(int argc, char **argv){
     char *ip;
     int ipRange;
@@ -79,6 +100,7 @@ int main(int argc, char **argv){
     int portaRange;
   
     if(argv[1] != NULL){
+        validateIP(argv[1]);
         ip = malloc(strlen(argv[1]));
         strcpy(ip, argv[1]);
         ipRange = getRange(ip, "-");
