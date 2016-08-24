@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define MAX_STRING_ARRAY 1
+#define IP_FIELD_SIZE 16
 
 int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
@@ -51,6 +53,24 @@ int getLastField(char *str){
     return atoi(field);
 }
 
+int generateIPs(char ***ips, int ipField, int range, char* ip){
+    char *charRangeaux;
+    int i,j;
+    int rangeAux = ipField;
+    charRangeaux = malloc(4);
+    for(i = 0; i < MAX_STRING_ARRAY; i++){
+        ips[i] = calloc(range, sizeof(char *));
+        for(j = 0; j <= (range - ipField); j++){
+            ips[i][j] = (char *) malloc(IP_FIELD_SIZE);
+            strcat(ips[i][j], ip);
+            sprintf(charRangeaux, "%d", rangeAux);
+            strcat(ips[i][j], charRangeaux);
+            rangeAux++;
+        }
+    }
+    return 1;
+}
+
 int main(int argc, char **argv){
     char *ip;
     int ipRange;
@@ -89,4 +109,6 @@ int main(int argc, char **argv){
         printf("Range: %d\n\n", portaRange); 
     }
    
+    char ***ips = calloc(1, sizeof(char **));
+    generateIPs(ips, ipLastField, ipRange, ip);
 }
