@@ -25,7 +25,16 @@ int getRange(char *str, char *splitter){
         strcpy(last,token);
         token = strtok(NULL, splitter);
     }
-    int range = atoi(last);
+    printf("STR: %s\n", str);
+
+    printf("LAST: %s\n", last);
+    int range;
+    if(strcmp(str,last) == 0){
+		range = 0;
+    }
+    else{
+    	range = atoi(last);
+    }
     free (last);
     return range;
 }
@@ -74,7 +83,7 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
     for(i = 0; i < MAX_STRING_ARRAY; i++){
         ips[i] = calloc(range, sizeof(char *));
         for(j = 0; j <= (range - ipField); j++){
-            printf("Range Atual: %d\n", rangeAux);
+            //printf("Range Atual: %d\n", rangeAux);
             ips[i][j] = (char *) calloc(IP_FIELD_SIZE, sizeof(char *));
             strcat(ips[i][j], ip);
             sprintf(charRangeaux, "%d", rangeAux);
@@ -145,9 +154,13 @@ int main(int argc, char **argv){
             strcpy(ip, argv[1]);
             ipRange = getRange(ip, "-");
             ipLastField = getLastField(ip);
-            if(ipRange < ipLastField){
+            if(ipRange < ipLastField && ipRange != 0){
                 printf("\nErro:\nValor do range do ip menor do que valor do campo ip\n");
                 return 0;
+            }
+            else{
+            	if(ipRange == 0)
+            		ipRange = ipLastField;
             }
             ip = ipSplit(ip);
             printf("\nIP: %s\n", ip);
@@ -186,8 +199,8 @@ int main(int argc, char **argv){
     generateIPs(ips, ipLastField, ipRange, ip);
     int j=0;
     printf("\n");
-    // for(j = 0; j <= ipRange-ipLastField; j++){
-    //   printf("IPS: %s\n", ips[0][j]);
-    // }
-    startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
+    for(j = 0; j <= ipRange-ipLastField; j++){
+      printf("IPS: %s\n", ips[0][j]);
+    }
+    //startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
 }
