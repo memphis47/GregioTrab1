@@ -21,13 +21,10 @@ int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
     char *last = malloc(sizeof(str));
     while(token) {
-        puts(token);
+        //puts(token);
         strcpy(last,token);
         token = strtok(NULL, splitter);
     }
-    printf("STR: %s\n", str);
-
-    printf("LAST: %s\n", last);
     int range;
     if(strcmp(str,last) == 0){
 		range = 0;
@@ -83,7 +80,6 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
     for(i = 0; i < MAX_STRING_ARRAY; i++){
         ips[i] = calloc(range, sizeof(char *));
         for(j = 0; j <= (range - ipField); j++){
-            //printf("Range Atual: %d\n", rangeAux);
             ips[i][j] = (char *) calloc(IP_FIELD_SIZE, sizeof(char *));
             strcat(ips[i][j], ip);
             sprintf(charRangeaux, "%d", rangeAux);
@@ -117,28 +113,33 @@ int startTestConnection(char ***ips, int nIPS, int port, int portRange){
     struct sockaddr_in connection;
     struct servent *servico;
     int connector;
-    
-    mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
-    for(i = 0; i < nIPS; i++){
+    int len;
+    char recebe[1024];
+
+
+	for(i = 0; i < nIPS; i++){
         for(j = port; j <= portRange; j++){
-            printf("Comecando conexao\n");
+        	mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
             connection.sin_family = SOCK_FAMILY;
             connection.sin_port = htons(j);
             connection.sin_addr.s_addr = inet_addr(ips[0][i]);
             
             bzero(&(connection.sin_zero),8);
-            printf("Conectando no IP: %s:%d\n",ips[0][i], j);
             connector = connect(mySocket, (struct sockaddr * ) &connection, sizeof(connection));
             if(connector < 0) {
         		perror("Connect");
         	}
         	else{
-        	    printf("Conectando no IP: %s:%d",ips[0][i], j);
-        	    servico = getservbyport(htons(j),"tcp");
-    			printf("A porta %d esta aberta mano!! O Servico é [%s]\n", j, (servico == NULL) ? "Desconhecido" : servico-> s_name);
+        		//TODO: Arrumar teste
+    			len = write(mySocket,"teste", strlen("teste"));
+    			bzero(recebe,sizeof(recebe));
+				len = read(mySocket,recebe,1024);
+				printf("%s\t%d\t%s\n", ips[0][i], j, recebe);
         	}
+        	close(mySocket);
         }
     }
+    
 }
 
 int main(int argc, char **argv){
@@ -163,9 +164,6 @@ int main(int argc, char **argv){
             		ipRange = ipLastField;
             }
             ip = ipSplit(ip);
-            printf("\nIP: %s\n", ip);
-            printf("Last field: %d\n", ipLastField);
-            printf("Range: %d\n\n", ipRange);
         }
         else{
             printf("\nFormato do IP inválido\n");
@@ -182,12 +180,14 @@ int main(int argc, char **argv){
             strcpy(strPorta, argv[2]);
             portaRange = getRange(strPorta, "-");
             porta = atoi(strPorta);
-            if(portaRange < porta){
+            if(portaRange < porta && portaRange != 0){
                 printf("\nErro:\nValor do range da porta menor do que valor do campo porta\n");
                 return 0;
             }
-            printf("Porta: %d\n", porta);
-            printf("Range: %d\n\n", portaRange); 
+            else{
+            	if(portaRange == 0)
+            		portaRange = porta;
+            }
         }
         else{
             printf("\nFormato da porta inválido\n");
@@ -197,10 +197,5 @@ int main(int argc, char **argv){
     
     char ***ips = calloc(1, sizeof(char **));
     generateIPs(ips, ipLastField, ipRange, ip);
-    int j=0;
-    printf("\n");
-    for(j = 0; j <= ipRange-ipLastField; j++){
-      printf("IPS: %s\n", ips[0][j]);
-    }
-    //startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
+    startTestConnection(ips, (ipRange - ipLastField) == 0 ? 1 : (ipRange - ipLastField) , porta, portaRange);
 }
