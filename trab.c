@@ -2,10 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
 #define MAX_STRING_ARRAY 1
 #define IP_FIELD_SIZE 16
+
 #define IP_REGEX "^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\.(([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))|(([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))\\-([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))))$"
 #define PORT_REGEX "(^(([0-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-6])|(([0-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-6])\\-([0-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-6])))$)"
+
+#define SOCK_FAMILY AF_INET
+#define SOCKET_TYPE SOCK_STREAM
+#define SOCK_TCP 6
 
 int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
@@ -64,7 +74,8 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
     for(i = 0; i < MAX_STRING_ARRAY; i++){
         ips[i] = calloc(range, sizeof(char *));
         for(j = 0; j <= (range - ipField); j++){
-            ips[i][j] = (char *) malloc(IP_FIELD_SIZE);
+            printf("Range Atual: %d\n", rangeAux);
+            ips[i][j] = (char *) calloc(IP_FIELD_SIZE, sizeof(char *));
             strcat(ips[i][j], ip);
             sprintf(charRangeaux, "%d", rangeAux);
             strcat(ips[i][j], charRangeaux);
@@ -89,6 +100,36 @@ int regexValidation(char *strValidate, char * pattern){
 		return 1;
 	else
 		return 0;
+}
+
+int startTestConnection(char ***ips, int nIPS, int port, int portRange){
+    int mySocket;
+    int i, j;
+    struct sockaddr_in connection;
+    struct servent *servico;
+    int connector;
+    
+    mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
+    for(i = 0; i < nIPS; i++){
+        for(j = port; j <= portRange; j++){
+            printf("Comecando conexao\n");
+            connection.sin_family = SOCK_FAMILY;
+            connection.sin_port = htons(j);
+            connection.sin_addr.s_addr = inet_addr(ips[0][i]);
+            
+            bzero(&(connection.sin_zero),8);
+            printf("Conectando no IP: %s:%d\n",ips[0][i], j);
+            connector = connect(mySocket, (struct sockaddr * ) &connection, sizeof(connection));
+            if(connector < 0) {
+        		perror("Connect");
+        	}
+        	else{
+        	    printf("Conectando no IP: %s:%d",ips[0][i], j);
+        	    servico = getservbyport(htons(j),"tcp");
+    			printf("A porta %d esta aberta mano!! O Servico é [%s]\n", j, (servico == NULL) ? "Desconhecido" : servico-> s_name);
+        	}
+        }
+    }
 }
 
 int main(int argc, char **argv){
@@ -140,7 +181,13 @@ int main(int argc, char **argv){
             return 0;
         }
     }
-   
+    
     char ***ips = calloc(1, sizeof(char **));
     generateIPs(ips, ipLastField, ipRange, ip);
+    int j=0;
+    printf("\n");
+    // for(j = 0; j <= ipRange-ipLastField; j++){
+    //   printf("IPS: %s\n", ips[0][j]);
+    // }
+    startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
 }
