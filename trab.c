@@ -197,5 +197,5 @@ int main(int argc, char **argv){
     
     char ***ips = calloc(1, sizeof(char **));
     generateIPs(ips, ipLastField, ipRange, ip);
-    startTestConnection(ips, (ipRange - ipLastField) == 0 ? 1 : (ipRange - ipLastField) , porta, portaRange);
+    startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
 }
