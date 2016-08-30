@@ -117,7 +117,7 @@ int startTestConnection(char ***ips, int nIPS, int port, int portRange){
     char recebe[1024];
 
 
-	for(i = 0; i < nIPS; i++){
+	for(i = 0; i <= nIPS; i++){
         for(j = port; j <= portRange; j++){
         	mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
             connection.sin_family = SOCK_FAMILY;
