@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <regex.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
+#include <time.h>
 
 #define MAX_STRING_ARRAY 1
 #define IP_FIELD_SIZE 16
@@ -21,16 +24,15 @@ int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
     char *last = malloc(sizeof(str));
     while(token) {
-        //puts(token);
         strcpy(last,token);
         token = strtok(NULL, splitter);
     }
     int range;
     if(strcmp(str,last) == 0){
-		range = 0;
+        range = 0;
     }
     else{
-    	range = atoi(last);
+        range = atoi(last);
     }
     free (last);
     return range;
@@ -91,20 +93,29 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
 }
 
 int regexValidation(char *strValidate, char * pattern){
-
     regex_t reg;
+
     /* compila a ER passada em argv[1]
-	 * em caso de erro, a função retorna diferente de zero */
-	if (regcomp(&reg , pattern, REG_EXTENDED|REG_NOSUB) != 0) {
-		fprintf(stderr,"erro regcomp\n");
-		exit(1);
-	}
-	/* tenta casar a ER compilada (&reg) com a entrada (argv[2]) 
-	 * se a função regexec retornar 0 casou, caso contrário não */
-	if ((regexec(&reg, strValidate, 0, (regmatch_t *)NULL, 0)) == 0)
-		return 1;
-	else
-		return 0;
+     * em caso de erro, a função retorna diferente de zero */
+    if (regcomp(&reg , pattern, REG_EXTENDED|REG_NOSUB) != 0) {
+        fprintf(stderr,"erro regcomp\n");
+        exit(1);
+    }
+    /* tenta casar a ER compilada (&reg) com a entrada (argv[2])
+     * se a função regexec retornar 0 casou, caso contrário não */
+    if ((regexec(&reg, strValidate, 0, (regmatch_t *)NULL, 0)) == 0)
+        return 1;
+    else
+        return 0;
+}
+
+void printTimestamp() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    char buf[255];
+
+    strftime(buf, sizeof(buf), "%c", &tm);
+    printf("%s", buf);
 }
 
 int startTestConnection(char ***ips, int nIPS, int port, int portRange){
@@ -115,31 +126,39 @@ int startTestConnection(char ***ips, int nIPS, int port, int portRange){
     int connector;
     int len;
     char recebe[1024];
+    char *pos;
 
-
-	for(i = 0; i <= nIPS; i++){
+    for(i = 0; i <= nIPS; i++){
         for(j = port; j <= portRange; j++){
-        	mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
+            mySocket = socket(SOCK_FAMILY, SOCKET_TYPE, SOCK_TCP);
             connection.sin_family = SOCK_FAMILY;
             connection.sin_port = htons(j);
             connection.sin_addr.s_addr = inet_addr(ips[0][i]);
-            
+
             bzero(&(connection.sin_zero),8);
             connector = connect(mySocket, (struct sockaddr * ) &connection, sizeof(connection));
-            if(connector < 0) {
-        		perror("Connect");
-        	}
-        	else{
-        		//TODO: Arrumar teste
-    			len = write(mySocket,"teste", strlen("teste"));
-    			bzero(recebe,sizeof(recebe));
-				len = read(mySocket,recebe,1024);
-				printf("%s\t%d\t%s\n", ips[0][i], j, recebe);
-        	}
-        	close(mySocket);
+
+            if(connector >= 0) {
+                /* escreve qualquer coisa, já que alguns serviços só enviam
+                 * o banner depois de alguma escrita */
+                len = write(mySocket, "teste", strlen("teste"));
+
+                /* tenta realizar uma leitura, possivelmente capturando uma
+                 * mensagem de banner */
+                bzero(recebe, sizeof(recebe));
+                len = read(mySocket, recebe, 1024);
+
+                /* ignora o \n e tudo que vem depois dele */
+                if ((pos=strchr(recebe, '\n')) != NULL)
+                    *pos = '\0';
+
+                printf("%s\t%d\t%s\n", ips[0][i], j, recebe);
+            }
+
+            close(mySocket);
         }
     }
-    
+
 }
 
 int main(int argc, char **argv){
@@ -148,9 +167,10 @@ int main(int argc, char **argv){
     int ipLastField;
     int porta;
     int portaRange;
-  
+
+    /* verifica o range de ips */
     if(argv[1] != NULL){
-        if(regexValidation(argv[1], IP_REGEX)){
+        if(regexValidation(argv[1], IP_REGEX)) {
             ip = malloc(strlen(argv[1]));
             strcpy(ip, argv[1]);
             ipRange = getRange(ip, "-");
@@ -160,8 +180,8 @@ int main(int argc, char **argv){
                 return 0;
             }
             else{
-            	if(ipRange == 0)
-            		ipRange = ipLastField;
+                if(ipRange == 0)
+                    ipRange = ipLastField;
             }
             ip = ipSplit(ip);
         }
@@ -172,8 +192,10 @@ int main(int argc, char **argv){
     }
     else{
         printf("\nErro:\nValor do ip não pode ser nulo\n");
-        return 0; 
+        return 0;
     }
+
+    /* verifica o range de portas */
     if(argv[2] != NULL){
         if(regexValidation(argv[2], PORT_REGEX)){
             char *strPorta = malloc(strlen(argv[2]));
@@ -185,8 +207,8 @@ int main(int argc, char **argv){
                 return 0;
             }
             else{
-            	if(portaRange == 0)
-            		portaRange = porta;
+                if(portaRange == 0)
+                    portaRange = porta;
             }
         }
         else{
@@ -194,8 +216,18 @@ int main(int argc, char **argv){
             return 0;
         }
     }
-    
+
+    printf("Varredura iniciada em: ");
+    printTimestamp();
+    printf("\n");
+    printf("IP: %s\n", argv[1]);
+    printf("Portas: %s\n", argv[2]);
+    printf("---\n");
+
+    /* cria uma lista de ips e portas a serem varridos */
     char ***ips = calloc(1, sizeof(char **));
     generateIPs(ips, ipLastField, ipRange, ip);
+
+    /* inicia a varredura */
     startTestConnection(ips, ipRange - ipLastField, porta, portaRange);
 }
