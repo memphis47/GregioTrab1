@@ -20,6 +20,9 @@
 #define SOCKET_TYPE SOCK_STREAM
 #define SOCK_TCP 6
 
+/**
+* Função que retorna o rannge da entrada str.
+**/
 int getRange(char *str, char *splitter){
     char *token = strtok(str, splitter);
     char *last = malloc(sizeof(str));
@@ -38,6 +41,9 @@ int getRange(char *str, char *splitter){
     return range;
 }
 
+/**
+*   Função que remove o ultimo campo do IP.
+**/
 char * ipSplit(char *str){
     int ipLen = strlen(str);
     char *splittedIp;
@@ -55,8 +61,11 @@ char * ipSplit(char *str){
     return splittedIp;
 }
 
+/**
+* Função que retorna o ultimo campo do IP, eg: se str = 192.168.0.25 retorna o valor 25
+**/
 int getLastField(char *str){
-   int ipLen = strlen(str);
+    int ipLen = strlen(str);
     char *splittedIp;
     int aux = 0;
     int i;
@@ -74,6 +83,9 @@ int getLastField(char *str){
     return atoi(field);
 }
 
+/**
+*   Gera os ips a serem testados.
+**/
 int generateIPs(char ***ips, int ipField, int range, char* ip){
     char *charRangeaux;
     int i,j;
@@ -92,6 +104,9 @@ int generateIPs(char ***ips, int ipField, int range, char* ip){
     return 1;
 }
 
+/**
+*   Função que faz a validação da entrada strValidate de acordo com o regex definido no pattern.
+**/
 int regexValidation(char *strValidate, char * pattern){
     regex_t reg;
 
@@ -109,6 +124,9 @@ int regexValidation(char *strValidate, char * pattern){
         return 0;
 }
 
+/**
+*   Função que Imprime o horário.
+**/
 void printTimestamp() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -118,6 +136,9 @@ void printTimestamp() {
     printf("%s", buf);
 }
 
+/**
+*   Função que testa os IPs definidos em ips, utilizando o range de porta definidos em portRange.
+**/
 int startTestConnection(char ***ips, int nIPS, int port, int portRange){
     int mySocket;
     int i, j;
@@ -158,7 +179,6 @@ int startTestConnection(char ***ips, int nIPS, int port, int portRange){
             close(mySocket);
         }
     }
-
 }
 
 int main(int argc, char **argv){
@@ -168,9 +188,15 @@ int main(int argc, char **argv){
     int porta;
     int portaRange;
 
+    
+    printf("Varredura iniciada em: ");
+    printTimestamp();
+    printf("\n");
     /* verifica o range de ips */
     if(argv[1] != NULL){
+    
         if(regexValidation(argv[1], IP_REGEX)) {
+            printf("IP: %s\n", argv[1]);
             ip = malloc(strlen(argv[1]));
             strcpy(ip, argv[1]);
             ipRange = getRange(ip, "-");
@@ -198,6 +224,8 @@ int main(int argc, char **argv){
     /* verifica o range de portas */
     if(argv[2] != NULL){
         if(regexValidation(argv[2], PORT_REGEX)){
+            printf("Portas: %s\n", argv[2]);
+
             char *strPorta = malloc(strlen(argv[2]));
             strcpy(strPorta, argv[2]);
             portaRange = getRange(strPorta, "-");
@@ -216,14 +244,14 @@ int main(int argc, char **argv){
             return 0;
         }
     }
+    else{
+        porta = 0;
+        portaRange = 65536;
+        printf("Portas: 0-65536\n");
+    }
 
-    printf("Varredura iniciada em: ");
-    printTimestamp();
-    printf("\n");
-    printf("IP: %s\n", argv[1]);
-    printf("Portas: %s\n", argv[2]);
     printf("---\n");
-
+    
     /* cria uma lista de ips e portas a serem varridos */
     char ***ips = calloc(1, sizeof(char **));
     generateIPs(ips, ipLastField, ipRange, ip);
